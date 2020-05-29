@@ -3,8 +3,20 @@ const babiliPlugin = require('babili-webpack-plugin');
 const extractTextPlugin = require('extract-text-webpack-plugin');
 const optimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 let plugins = [];
+
+plugins.push(new HtmlWebpackPlugin({
+    hash: true,
+    minify: {
+        html5: true,
+        collapseWhitespace: true,
+        removeComments: true,
+    },    
+    filename: 'index.html',
+    template: __dirname + '/main.html'
+}));
 
 plugins.push(
     new extractTextPlugin("styles.css")
@@ -17,10 +29,23 @@ plugins.push(
     })
 );
 
+plugins.push(
+    new webpack.optimize.CommonsChunkPlugin(
+        { 
+            name: 'vendor', 
+            filename: 'vendor.bundle.js'
+        }
+    )
+);
+
+let SERVICE_URL = JSON.stringify('http://localhost:3000');
+
 if (process.env.NODE_ENV == 'production') {
 
-    plugins.push(new babiliPlugin());
+    SERVICE_URL = JSON.stringify('http://localhost:3000');
 
+    plugins.push(new webpack.optimize.ModuleConcatenationPlugin());
+    plugins.push(new babiliPlugin());
     plugins.push(new optimizeCSSAssetsPlugin({
         cssProcessor: require('cssnano'),
         cssProcessorOptions: { 
@@ -29,15 +54,19 @@ if (process.env.NODE_ENV == 'production') {
             }
         },
         canPrint: true
-     }));      
-}
+    })); 
+} 
+
+plugins.push(new webpack.DefinePlugin({ SERVICE_URL }));
 
 module.exports = {
-    entry: './app-src/app.js',
+    entry: {
+        app: './app-src/app.js',
+        vendor: ['jquery', 'bootstrap', 'reflect-metadata']
+    },
     output: {
         filename: 'bundle.js',
-        path: path.resolve(__dirname, 'dist'),
-        publicPath: 'dist'
+        path: path.resolve(__dirname, 'dist')
     },
     module: {
         rules: [
